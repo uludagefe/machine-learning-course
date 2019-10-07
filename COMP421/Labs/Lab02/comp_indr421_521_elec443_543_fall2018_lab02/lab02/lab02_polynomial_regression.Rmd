@@ -1,0 +1,158 @@
+---
+title: 'Lab02: Polynomial Regression'
+author: "Mehmet Gönen"
+date: "October 1, 2018"
+output: html_document
+runtime: shiny
+---
+
+## Importing Data
+```{r}
+# read data into memory
+data_set <- read.csv("lab02_data_set.csv")
+
+# get x and y values
+x <- data_set$x
+y <- data_set$y
+
+# get number of samples
+N <- length(y)
+
+x_test <- seq(from = 0, to = 60, by = 0.1)
+```
+
+## Plotting Data
+```{r}
+# plot the training data to see the trend
+plot(x, y, las = 1)
+```
+
+## Linear Regression
+\begin{align*}
+\underbrace{\begin{bmatrix} N & \sum\limits_{i = 1}^{N} x_{i}\\ \sum\limits_{i = 1}^{N} x_{i} & \sum\limits_{i = 1}^{N} x_{i}^{2} \end{bmatrix}}_{\mathbf{A}} \underbrace{\begin{bmatrix}w_{0} \\ w_{1} \end{bmatrix}}_{\boldsymbol{w}} &= \underbrace{\begin{bmatrix}\sum\limits_{i = 1}^{N} y_{i} \\ \sum\limits_{i = 1}^{N} y_{i} x_{i} \end{bmatrix}}_{\boldsymbol{b}} \\
+\boldsymbol{w} &= \mathbf{A}^{-1} \boldsymbol{b}
+\end{align*}
+
+```{r}
+# calculate A
+A <- matrix(c(N, sum(x), sum(x), sum(x^2)), 2, 2)
+print(A)
+
+# calculate b
+b <- c(sum(y), sum(y * x))
+print(b)
+
+# calculate w
+w <- chol2inv(chol(A)) %*% b
+print(w)
+```
+
+```{r}
+plot(x, y, las = 1)
+points(x_test, cbind(1, x_test) %*% w, lwd = 2, col = "blue", type = "l")
+```
+
+## Polynomial Regression
+\begin{align*}
+\underbrace{\begin{bmatrix} N & \sum\limits_{i = 1}^{N} x_{i} & \dots &  \sum\limits_{i = 1}^{N} x_{i}^{K}\\ \sum\limits_{i = 1}^{N} x_{i} & \sum\limits_{i = 1}^{N} x_{i}^{2} & \dots & \sum\limits_{i = 1}^{N} x_{i}^{K + 1}\\ \vdots & \vdots & \ddots & \vdots \\
+\sum\limits_{i = 1}^{N} x_{i}^{K} & \sum\limits_{i = 1}^{N} x_{i}^{K + 1} & \dots & \sum\limits_{i = 1}^{N} x_{i}^{2K}\end{bmatrix}}_{\mathbf{A}} \underbrace{\begin{bmatrix}w_{0} \\ w_{1} \\ \vdots \\ w_{K} \end{bmatrix}}_{\boldsymbol{w}} &= \underbrace{\begin{bmatrix}\sum\limits_{i = 1}^{N} y_{i} \\ \sum\limits_{i = 1}^{N} y_{i} x_{i} \\ \vdots \\ \sum\limits_{i = 1}^{N} y_{i} x_{i}^{K} \end{bmatrix}}_{\boldsymbol{b}} \\
+\boldsymbol{w} &= \mathbf{A}^{-1} \boldsymbol{b}
+\end{align*}
+
+```{r}
+polynomial_regression <- function(x, y, K) {
+  # calculate A and b
+  A <- matrix(0, K + 1, K + 1)
+  for (i in 0:K) {
+    for (j in 0:K) {
+      A[i + 1, j + 1] <- sum(x^i * x^j)
+    }
+  }
+  
+  b <- rep(0, K + 1)
+  for (i in 0:K) {
+    b[i + 1] <- sum(y * x^i)
+  }
+  
+  # calculate w
+  w <- chol2inv(chol(A)) %*% b
+  
+  return(w)
+}
+```
+
+```{r}
+inputPanel(
+  sliderInput("polynomial_degree1", label = "Polynomial degree:", min = 0, max = 10, step = 1, value = 1)
+)
+
+renderPlot({
+  K <- as.numeric(input$polynomial_degree1)
+  w <- polynomial_regression(x, y, K)
+  plot(x, y, las = 1)
+  points(x_test, sapply(0:K, function(k) x_test^k) %*% w, lwd = 2, col = "blue", type = "l")
+}, width = 800, height = 600)
+```
+
+\begin{align*}
+\begin{bmatrix} N & \sum\limits_{i = 1}^{N} x_{i} & \dots &  \sum\limits_{i = 1}^{N} x_{i}^{K}\\ \sum\limits_{i = 1}^{N} x_{i} & \sum\limits_{i = 1}^{N} x_{i}^{2} & \dots & \sum\limits_{i = 1}^{N} x_{i}^{K + 1}\\ \vdots & \vdots & \ddots & \vdots \\
+\sum\limits_{i = 1}^{N} x_{i}^{K} & \sum\limits_{i = 1}^{N} x_{i}^{K + 1} & \dots & \sum\limits_{i = 1}^{N} x_{i}^{2K}\end{bmatrix} \begin{bmatrix}w_{0} \\ w_{1} \\ \vdots \\ w_{K} \end{bmatrix} &= \begin{bmatrix}\sum\limits_{i = 1}^{N} y_{i} \\ \sum\limits_{i = 1}^{N} y_{i} x_{i} \\ \vdots \\ \sum\limits_{i = 1}^{N} y_{i} x_{i}^{K} \end{bmatrix} \\
+\\
+\underbrace{\begin{bmatrix}1 & 1 & \dots & 1\\ x_{1} & x_{2} & \dots & x_{N} \\ \vdots & \vdots & \ddots & \vdots \\ x_{1}^{K} & x_{2}^{K} & \dots & x_{N}^{K} \end{bmatrix}}_{\mathbf{D}^{\top}} \underbrace{\begin{bmatrix}1 & x_{1} & \dots & x_{1}^{K}\\ 1 & x_{2} & \dots & x_{2}^{K} \\ \vdots & \vdots & \ddots & \vdots \\ 1 & x_{N} & \dots & x_{N}^{K} \end{bmatrix}}_{\mathbf{D}} \underbrace{\begin{bmatrix}w_{0} \\ w_{1} \\ \vdots \\ w_{K} \end{bmatrix}}_{\boldsymbol{w}} &= \underbrace{\begin{bmatrix}1 & 1 & \dots & 1\\ x_{1} & x_{2} & \dots & x_{N} \\ \vdots & \vdots & \ddots & \vdots \\ x_{1}^{K} & x_{2}^{K} & \dots & x_{N}^{K} \end{bmatrix}}_{\mathbf{D}^{\top}} \underbrace{\begin{bmatrix}y_{1} \\ y_{2} \\ \vdots \\ y_{N} \end{bmatrix}}_{\boldsymbol{y}} \\
+\boldsymbol{w} &= \left(\mathbf{D}^{\top}\mathbf{D}\right)^{-1} \mathbf{D}^{\top} \boldsymbol{y}
+\end{align*}
+
+```{r}
+polynomial_regression <- function(x, y, K) {
+  # calculate D
+  D <- sapply(0:K, function(k) x^k)
+  
+  # calculate w
+  w <- chol2inv(chol(t(D) %*% D)) %*% (t(D) %*% y)
+  
+  return(w)
+}
+```
+
+```{r}
+inputPanel(
+  sliderInput("polynomial_degree2", label = "Polynomial degree:", min = 0, max = 10, step = 1, value = 1)
+)
+
+renderPlot({
+  K <- as.numeric(input$polynomial_degree2)
+  w <- polynomial_regression(x, y, K)
+  plot(x, y, las = 1)
+  points(x_test, sapply(0:K, function(k) x_test^k) %*% w, lwd = 2, col = "blue", type = "l")
+}, width = 800, height = 600)
+```
+
+## Nonlinear Regression
+```{r}
+nonlinear_regression <- function(x, y, centers, sigma) {
+  # calculate D
+  D <- cbind(1, sapply(centers, function(center) exp(-(x - center)^2 / (2 * sigma^2))))
+  
+  # calculate w
+  w <- chol2inv(chol(t(D) %*% D)) %*% (t(D) %*% y)
+  
+  return(w)
+}
+```
+
+```{r}
+inputPanel(
+  sliderInput("density_sigma", label = "Sigma:", min = 1, max = 10, step = 1, value = 5)
+)
+
+renderPlot({
+  centers <- seq(from = 5, to = 55, by = 5)
+  sigma <- as.numeric(input$density_sigma)
+  w <- nonlinear_regression(x, y, centers, sigma)
+  D_test <- cbind(1, sapply(centers, function(center) exp(-(x_test - center)^2 / (2 * sigma^2))))
+  
+  plot(x, y, las = 1)
+  points(centers, rep(0, length(centers)), pch = 19, cex = 1.5, col = "red")
+  points(x_test, D_test %*% w, lwd = 2, col = "blue", type = "l")
+}, width = 800, height = 600)
+```

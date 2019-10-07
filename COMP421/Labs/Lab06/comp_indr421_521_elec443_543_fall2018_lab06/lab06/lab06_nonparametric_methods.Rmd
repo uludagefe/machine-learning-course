@@ -1,0 +1,216 @@
+---
+title: 'Lab06: Nonparametric Methods'
+author: "Mehmet Gönen"
+date: "November 5, 2018"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Parameters
+```{r}
+set.seed(421)
+# mean parameters
+class_means <- c(-2, +1, 3)
+# standard deviation parameters
+class_deviations <- c(2.0, 1.2, 1.6)
+# sample sizes
+class_sizes <- c(20, 15, 25)
+```
+
+## Data Generation
+```{r}
+# generate random samples
+points1 <- rnorm(n = class_sizes[1], mean = class_means[1], sd = class_deviations[1])
+points2 <- rnorm(n = class_sizes[2], mean = class_means[2], sd = class_deviations[2])
+points3 <- rnorm(n = class_sizes[3], mean = class_means[3], sd = class_deviations[3])
+x <- c(points1, points2, points3)
+
+# generate corresponding labels
+y <- c(rep(1, class_sizes[1]), rep(2, class_sizes[2]), rep(3, class_sizes[3]))
+```
+
+## Exporting Data
+```{r}
+# write data to a file
+write.csv(x = cbind(x, y), file = "lab06_data_set.csv", row.names = FALSE)
+```
+
+## Plotting Data
+```{r}
+# plot densities used and data points generated together
+renderPlot({
+  data_interval <- seq(from = -8, to = +8, by = 0.01)
+  density1 <- dnorm(data_interval, mean = class_means[1], sd = class_deviations[1])
+  density2 <- dnorm(data_interval, mean = class_means[2], sd = class_deviations[2])
+  density3 <- dnorm(data_interval, mean = class_means[3], sd = class_deviations[3])
+  plot(data_interval, density1, type = "l", col = "red", lwd = 2, 
+       ylim = c(-0.03, max(density1, density2, density3)),
+       xlab = "x", ylab = "density", las = 1)
+  points(data_interval, density2, type = "l", col = "green", lwd = 2)
+  points(data_interval, density3, type = "l", col = "blue", lwd = 2)
+  points(points1, rep(-0.01, class_sizes[1]), type = "p", pch = 19, col = "red")
+  points(points2, rep(-0.02, class_sizes[2]), type = "p", pch = 19, col = "green")
+  points(points3, rep(-0.03, class_sizes[3]), type = "p", pch = 19, col = "blue")
+}, width = 800, height = 400)
+```
+
+## Importing Data
+```{r}
+# read data into memory
+data_set <- read.csv("lab06_data_set.csv")
+
+# get x and y values
+x_train <- data_set$x
+y_train <- data_set$y
+
+# get number of classes and number of samples
+K <- max(y_train)
+N <- length(y_train)
+```
+
+## Drawing Parameters
+```{r}
+point_colors <- c("red", "green", "blue")
+minimum_value <- -8
+maximum_value <- +8
+data_interval <- seq(from = minimum_value, to = maximum_value, by = 0.01)
+```
+
+## Histogram Estimator
+$$\widehat{p}(x) = \dfrac{\#\{x_{i} \textrm{ is in the same bin as } x\}}{Nh}$$
+```{r}
+inputPanel(
+  sliderInput("bin_width1", label = "Bin width:", min = 0.1, max = 2, step = 0.1, value = 0.5, animate = TRUE)
+)
+
+renderPlot({
+  bin_width <- as.numeric(input$bin_width1)
+  left_borders <- seq(from = minimum_value, to = maximum_value - bin_width, by = bin_width)
+  right_borders <- seq(from = minimum_value + bin_width, to = maximum_value, by = bin_width)
+  p_head <- sapply(1:length(left_borders), function(b) {sum(left_borders[b] < x_train & x_train <= right_borders[b])}) / (N * bin_width)
+
+  plot(x_train, -0.01 * y_train, type = "p", pch = 19, col = point_colors[y_train],
+       ylim = c(-0.03, max(p_head)), xlim = c(minimum_value, maximum_value),
+       ylab = "density", xlab = "x", las = 1, main = sprintf("h = %g", bin_width))
+  for (b in 1:length(left_borders)) {
+    lines(c(left_borders[b], right_borders[b]), c(p_head[b], p_head[b]), lwd = 2, col = "black")
+    if (b < length(left_borders)) {
+      lines(c(right_borders[b], right_borders[b]), c(p_head[b], p_head[b + 1]), lwd = 2, col = "black") 
+    }
+  }
+}, width = 800, height = 400)
+```
+
+## Naive Estimator
+$$\widehat{p}(x) = \dfrac{\#\{x - h/2 \lt x_{i} \leq x + h/2\}}{Nh}$$
+```{r}
+inputPanel(
+  sliderInput("bin_width2", label = "Bin width:", min = 0.1, max = 2, step = 0.1, value = 0.5, animate = TRUE)
+)
+
+renderPlot({
+  bin_width <- as.numeric(input$bin_width2)
+  p_head <- sapply(data_interval, function(x) {sum((x - 0.5 * bin_width) < x_train & x_train <= (x + 0.5 * bin_width))}) / (N * bin_width)
+
+  plot(x_train, -0.01 * y_train, type = "p", pch = 19, col = point_colors[y_train],
+       ylim = c(-0.03, max(p_head)), xlim = c(minimum_value, maximum_value),
+       ylab = "density", xlab = "x", las = 1, main = sprintf("h = %g", bin_width))
+  lines(data_interval, p_head, type = "l", lwd = 2, col = "black")
+}, width = 800, height = 400)
+```
+
+## Kernel Estimator
+\begin{align*}
+\widehat{p}(x) &= \dfrac{1}{Nh} \sum \limits_{i = 1}^{N} K\left(\dfrac{x - x_{i}}{h}\right) \\
+K(u) &= \dfrac{1}{\sqrt{2\pi}} \exp\left(-\dfrac{u^2}{2}\right)
+\end{align*}
+```{r}
+inputPanel(
+  sliderInput("bin_width3", label = "Bin width:", min = 0.1, max = 2, step = 0.1, value = 0.5, animate = TRUE)
+)
+
+renderPlot({
+  bin_width <- as.numeric(input$bin_width3)
+  p_head <- sapply(data_interval, function(x) {sum(1 / sqrt(2 * pi) * exp(-0.5 * (x - x_train)^2 / bin_width^2))}) / (N * bin_width)
+
+  plot(x_train, -0.01 * y_train, type = "p", pch = 19, col = point_colors[y_train],
+       ylim = c(-0.03, max(p_head)), xlim = c(minimum_value, maximum_value),
+       ylab = "density", xlab = "x", las = 1, main = sprintf("h = %g", bin_width))
+  lines(data_interval, p_head, type = "l", lwd = 2, col = "black")
+}, width = 800, height = 400)
+```
+
+# k-Nearest Neighbor Estimator
+\begin{align*}
+\widehat{p}(x) &= \dfrac{k}{2Nd_{k}(x)} \\
+d_{k}(x) &= \textrm{distance to k$^{th}$ closest data point to $x$} 
+\end{align*}
+```{r}
+inputPanel(
+  sliderInput("k1", label = "Neighborhood size (k):", min = 3, max = 19, step = 2, value = 11, animate = TRUE)
+)
+
+renderPlot({
+  k <- as.numeric(input$k1)
+  p_head <- sapply(data_interval, function(x) {k / (2 * N * sort(abs(x - x_train), decreasing = FALSE)[k])})
+
+  plot(x_train, -0.01 * y_train, type = "p", pch = 19, col = point_colors[y_train],
+       ylim = c(-0.03, max(p_head)), xlim = c(minimum_value, maximum_value),
+       ylab = "density", xlab = "x", las = 1, main = sprintf("k = %g", k))
+  lines(data_interval, p_head, type = "l", lwd = 2, col = "black")
+}, width = 800, height = 400)
+```
+
+# Nonparametric Classification
+$$g_{c}(x) = \dfrac{1}{Nh^{D}} \sum \limits_{i = 1}^{N} \left[K\left(\dfrac{x - x_{i}}{h}\right)y_{ic}\right]$$
+```{r}
+inputPanel(
+  sliderInput("bin_width4", label = "Bin width:", min = 0.1, max = 2, step = 0.1, value = 0.5, animate = TRUE)
+)
+
+renderPlot({
+  bin_width <- as.numeric(input$bin_width4)
+  p_head <- matrix(0, length(data_interval), K)
+  for (c in 1:K) {
+    p_head[,c] <- sapply(data_interval, function(x) {sum(1 / sqrt(2 * pi) * exp(-0.5 * (x - x_train[y_train == c])^2 / bin_width^2))}) / (N * bin_width) 
+  }
+
+  plot(x_train, -0.01 * y_train, type = "p", pch = 19, col = point_colors[y_train],
+     ylim = c(-0.03, max(p_head)), xlim = c(minimum_value, maximum_value),
+     ylab = "density", xlab = "x", las = 1, main = sprintf("h = %g", bin_width))
+  for (c in 1:K) {
+    lines(data_interval, p_head[,c], type = "l", lwd = 2, col = point_colors[c]) 
+  }
+  points(data_interval, rep(max(p_head), length(data_interval)),
+         col = point_colors[apply(p_head, 1, which.max)], pch = 19)
+}, width = 800, height = 400)
+```
+
+# kNN Classification
+$$g_{c}(x) = \dfrac{k_{c}}{k}$$
+```{r}
+inputPanel(
+  sliderInput("k2", label = "Neighborhood size (k):", min = 3, max = 19, step = 2, value = 11, animate = TRUE)
+)
+
+renderPlot({
+  k <- as.numeric(input$k2)
+  p_head <- matrix(0, length(data_interval), K)
+  for (c in 1:K) {
+    p_head[,c] <- sapply(data_interval, function(x) {sum(y_train[order(abs(x - x_train), decreasing = FALSE)[1:k]] == c) / k}) 
+  }
+
+  plot(x_train, -0.01 * y_train, type = "p", pch = 19, col = point_colors[y_train],
+       ylim = c(-0.03, max(p_head)), xlim = c(minimum_value, maximum_value),
+       ylab = "density", xlab = "x", las = 1, main = sprintf("k = %g", k))
+  for (c in 1:K) {
+    lines(data_interval, p_head[,c], type = "l", lwd = 2, col = point_colors[c]) 
+  }
+  points(data_interval, rep(max(p_head), length(data_interval)),
+         col = point_colors[apply(p_head, 1, which.max)], pch = 19)
+}, width = 800, height = 400)
+```

@@ -1,0 +1,177 @@
+---
+title: 'Lab09: Kernel Machines'
+author: "Mehmet Gönen"
+date: "November 26, 2018"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+```
+
+## Parameters
+```{r}
+set.seed(421)
+# mean parameters
+class_means <- matrix(c(+2.0, +2.0,
+                        -1.5, +0.5,
+                        +1.5, -1.5), 2, 3)
+# covariance parameters
+class_covariances <- array(c(+0.1, 0.0, 0.0, +0.1,
+                             +0.2, 0.0, 0.0, +0.2,
+                             +0.2, 0.0, 0.0, +0.2), c(2, 2, 3))
+# sample sizes
+class_sizes <- c(2, 49, 49)
+```
+
+## Data Generation
+```{r}
+# generate random samples
+points1 <- mvrnorm(n = class_sizes[1], mu = class_means[,1], Sigma = class_covariances[,,1])
+points2 <- mvrnorm(n = class_sizes[2], mu = class_means[,2], Sigma = class_covariances[,,2])
+points3 <- mvrnorm(n = class_sizes[3], mu = class_means[,3], Sigma = class_covariances[,,3])
+X <- rbind(points1, points2, points3)
+colnames(X) <- c("x1", "x2")
+```
+
+## Exporting Data
+```{r}
+# write data to a file
+write.csv(x = X, file = "lab09_description_data_set.csv", row.names = FALSE)
+```
+
+## Plotting Data
+```{r, fig.height = 6, fig.width = 6}
+# plot data points generated
+plot(X[,1], X[,2], type = "p", pch = 19, col = "black", las = 1,
+     xlim = c(-3, 3), ylim = c(-3, 3),
+     xlab = "x1", ylab = "x2")
+```
+
+## Importing Data
+```{r}
+# read data into memory
+data_set <- read.csv("lab09_description_data_set.csv")
+
+# get X values
+X_train <- cbind(data_set$x1, data_set$x2)
+
+# get number of samples and number of features
+N_train <- nrow(X_train)
+D_train <- ncol(X_train)
+```
+
+## Distance and Kernel Functions
+$$d(\boldsymbol{x}_{i}, \boldsymbol{x}_{j}) = ||\boldsymbol{x}_{i} - \boldsymbol{x}_{j}||_{2} = \sqrt{(\boldsymbol{x}_{i} - \boldsymbol{x}_{j})^{\top} (\boldsymbol{x}_{i} - \boldsymbol{x}_{j})} = \sqrt{\sum\limits_{d = 1}^{D}(x_{id} - x_{jd})^{2}}$$
+```{r}
+# define Euclidean distance function
+pdist <- function(X1, X2) {
+  if (identical(X1, X2) == TRUE) {
+    D <- as.matrix(dist(X1))
+  }
+  else {
+    D <- as.matrix(dist(rbind(X1, X2)))
+    D <- D[1:nrow(X1), (nrow(X1) + 1):(nrow(X1) + nrow(X2))]
+  }
+  return(D)
+}
+```
+$$k(\boldsymbol{x}_{i}, \boldsymbol{x}_{j}) = \exp\left(-\dfrac{||\boldsymbol{x}_{i} - \boldsymbol{x}_{j}||_{2}^{2}}{2s^{2}}\right)$$
+```{r}
+# define Gaussian kernel function
+gaussian_kernel <- function(X1, X2, sigma) {
+  D <- pdist(X1, X2)
+  K <- exp(-D^2 / (2 * sigma^2))
+}
+```
+
+## Learning Algorithm
+Primal Problem
+$$
+\begin{equation}
+	\begin{split}
+		\mbox{minimize}\;\;& R^{2} + C \sum\limits_{i = 1}^{N} \xi_{i} \\
+		\mbox{with respect to}\;\;& \boldsymbol{a} \in \mathbb{R}^{D},\;\; \boldsymbol{\xi} \in \mathbb{R}^{N},\;\; R \in \mathbb{R} \\
+		\mbox{subject to}\;\;& \|\boldsymbol{x}_{i} - \boldsymbol{a}\|_{2}^{2}  \leq R^{2} + \xi_{i} \;\;\;\; i = 1,2,\dots,N \\
+		& \xi_{i} \geq 0\;\;\;\; i = 1,2,\dots,N \\
+		\mbox{where}\;\;& C \in \mathbb{R}_{+}
+	\end{split}
+\end{equation}$$
+
+Dual Problem
+$$
+\begin{equation}
+	\begin{split}
+		\mbox{maximize}\;\;& \sum\limits_{i = 1}^{N} \alpha_{i} k(\boldsymbol{x}_{i}, \boldsymbol{x}_{i}) - \sum\limits_{i = 1}^{N} \sum\limits_{j = 1}^{N} \alpha_{i} \alpha_{j}  k(\boldsymbol{x}_{i}, \boldsymbol{x}_{j}) \\
+		\mbox{with respect to}\;\;& \boldsymbol{\alpha} \in \mathbb{R}^{N} \\
+		\mbox{subject to}\;\;& \sum\limits_{i = 1}^{N} \alpha_{i} = 1 \\
+		& 0 \leq \alpha_{i} \leq C\;\;\;\; i = 1,2,\dots,N \\
+		\mbox{where}\;\;& C \in \mathbb{R}_{+}
+	\end{split}
+\end{equation}
+$$
+
+Dual Problem in Matrix-Vector Form
+$$
+\begin{equation}
+	\begin{split}
+		\mbox{minimize}\;\;&-\dfrac{1}{2}\mbox{diag}(\mathbf{K})^{\top} \boldsymbol{\alpha} + \dfrac{1}{2} \boldsymbol{\alpha}^{\top} \mathbf{K} \boldsymbol{\alpha} \\
+		\mbox{with respect to}\;\; & \boldsymbol{\alpha} \in \mathbb{R}^{N} \\
+		\mbox{subject to}\;\;& \boldsymbol{1}^{\top} \boldsymbol{\alpha} = 1 \\
+		& \boldsymbol{0} \leq \boldsymbol{\alpha} \leq C \boldsymbol{1} \\
+		\mbox{where}\;\;& C \in \mathbb{R}_{+}
+	\end{split}
+\end{equation}
+$$
+
+```{r}
+inputPanel(
+  sliderInput("s", label = "log2(Kernel width parameter) log2(s):", min = -2, max = 2, step = 1, value = 0, animate = TRUE),
+  sliderInput("C", label = "Regularization parameter (C):", min = 0.1, max = 1, step = 0.1, value = 0.1, animate = TRUE)
+)
+
+renderPlot({
+  # calculate Gaussian kernel
+  s <- 2^as.numeric(input$s)
+  K_train <- gaussian_kernel(X_train, X_train, s)
+
+  # set learning parameters
+  C <- 10^as.numeric(input$C)
+  epsilon <- 1e-3
+  
+  # add library required to solve QP problems
+  library(kernlab)
+  result <- ipop(c = -0.5 * diag(K_train), H = K_train,
+                 A = rep(1, N_train), b = 1, r = 0,
+                 l = rep(0, N_train), u = rep(C, N_train))
+  alpha <- result@primal
+  alpha[alpha > 0 & alpha < C * epsilon] <- 0
+  alpha[alpha > 0 & alpha > C * (1 - epsilon)] <- C
+  
+  # find R parameter
+  support_indices <- which(alpha != 0)
+  active_indices <- which(alpha != 0 & alpha < C)
+  R <- sqrt(alpha[support_indices] %*% K_train[support_indices, support_indices] %*% alpha[support_indices] + 
+            mean(diag(K_train[active_indices, active_indices])) - 2 * mean(K_train[active_indices, support_indices] %*% alpha[support_indices]))
+  
+  # evaluate discriminant function on a grid
+  x1_interval <- seq(from = -3, to = +3, by = 0.15)
+  x2_interval <- seq(from = -3, to = +3, by = 0.15)
+  x1_grid <- matrix(x1_interval, nrow = length(x1_interval), ncol = length(x1_interval), byrow = FALSE)
+  x2_grid <- matrix(x2_interval, nrow = length(x2_interval), ncol = length(x2_interval), byrow = TRUE)
+  
+  K_test_train <- gaussian_kernel(cbind(as.numeric(x1_grid), as.numeric(x2_grid)), X_train, s)
+  K_test_test <- gaussian_kernel(cbind(as.numeric(x1_grid), as.numeric(x2_grid)), cbind(as.numeric(x1_grid), as.numeric(x2_grid)), s)
+  
+  discriminant_values <- matrix(as.numeric(R^2 - alpha[support_indices] %*% K_train[support_indices, support_indices] %*% alpha[support_indices]) + 2 * K_test_train %*% alpha - diag(K_test_test), length(x1_interval), length(x2_interval))
+  
+  plot(X_train[, 1], X_train[, 2], 
+       type = "p", pch = 19, col = "red",
+       xlim = c(-3, +3), ylim = c(-3, +3),
+       xlab = "x1", ylab = "x2", las = 1)
+  points(X_train[support_indices, 1], X_train[support_indices, 2], cex = 2.5, lwd = 2, pch = 1)
+  contour(x1_interval, x2_interval, discriminant_values, levels = 0, add = TRUE, lwd = 2, drawlabels = FALSE, lty = c(1, 2, 2))
+}, width = 600, height = 600)
+```

@@ -1,0 +1,70 @@
+---
+title: 'Lab11: Clustering'
+author: "Mehmet Gönen"
+date: "December 10, 2018"
+output: html_document
+runtime: shiny
+---
+
+```{r, echo=FALSE}
+library(MASS)
+
+X <<- NULL
+assignments <<- NULL
+hc <<- NULL
+
+inputPanel(
+  selectInput("sample_number", label = "Number of samples", choices = 20 * (1:5), selected = 60),
+  selectInput("cluster_number", label = "Number of clusters", choices = 2:12, selected = 4),
+  selectInput("agglomeration_method", label = "Agglomeration method", choices = c("average", "complete", "single"), selected = "average")
+)
+inputPanel(
+  actionButton("initialize_data", label = "Initialize data"),
+  actionButton("perform_clustering", label = "Perform clustering")
+)
+
+observeEvent(input$initialize_data, 
+  {
+    assignments <<- NULL
+    hc <<- NULL
+    N <- as.numeric(input$sample_number)
+    X1 <- mvrnorm(round(N / 4), c(+2, +2), matrix(c(.4, 0, 0, .4), 2, 2))
+    X2 <- mvrnorm(round(N / 4), c(-2, +2), matrix(c(.4, 0, 0, .4), 2, 2))
+    X3 <- mvrnorm(round(N / 4), c(+2, -2), matrix(c(.4, 0, 0, .4), 2, 2))
+    X4 <- mvrnorm(round(N / 4), c(-2, -2), matrix(c(.4, 0, 0, .4), 2, 2))
+    X <- rbind(X1, X2, X3, X4)
+    X <<- scale(X)
+  }
+)
+
+observeEvent(input$perform_clustering,
+  {
+    hc <<- hclust(d = dist(X), method = input$agglomeration_method)
+    assignments <<- cutree(hc, input$cluster_number)
+  }
+)
+
+renderPlot({
+  input$initialize_data
+  input$perform_clustering
+  if (is.null(X) == FALSE && is.null(hc) == FALSE) {
+    par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
+    plot(hc, axes = FALSE, xlab = "", ylab = "", main = "", cex = 1, cex.main = 1.5, lwd = 2, sub = "", hang = -1)
+  }
+}, height = 300, width = 1000)
+
+renderPlot({
+  input$initialize_data
+  input$perform_clustering
+  colors <- c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a", "#b15928", "#a6cee3", "#b2df8a", "#fb9a99", "#fdbf6f", "#cab2d6", "#ffff99")
+  if (is.null(X) == FALSE && is.null(assignments) == TRUE) {
+    par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
+    plot(X[,1], X[,2], col = "lightgray", xlim = c(-2, 2), ylim = c(-2, 2), xlab = "", ylab = "", cex = 1.5, axes = FALSE, pch = 19)
+  }
+  if (is.null(X) == FALSE && is.null(assignments) == FALSE) {
+    par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
+    plot(X[,1], X[,2], col = colors[assignments], xlim = c(-2, 2), ylim = c(-2, 2), xlab = "", ylab = "", cex = 1.5, axes = FALSE, pch = 19)
+    text(x = X[,1], y = X[,2] + 0.1, labels = 1:nrow(X))
+  }
+}, height = 1000, width = 1000)
+```
