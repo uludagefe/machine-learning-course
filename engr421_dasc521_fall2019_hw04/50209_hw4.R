@@ -1,5 +1,5 @@
 #read data 
-setwd('/home/emre/Documents/CollegeFiles/COMP421/MachineLearningCourse/engr421_dasc521_fall2019_hw04')
+setwd('/Users/euludag14/Documents/MachineLearningCourse/engr421_dasc521_fall2019_hw04')
 data <- read.csv('hw04_data_set.csv')
 
 #split data into trest and training data
@@ -61,7 +61,7 @@ lines(x = draw_data$x,
       type = 'S')
 title(main = 'h = 0.37')
 
-legend(x = min(data$eruptions)-0.2, y= max(data$waiting)-25 , legend = c('training', 'test'),col = c('blue', 'red'), pch = 20, xjust = 0, yjust = 0,cex=0.75)
+legend(x = min(data$eruptions)-0.2, y= max(data$waiting)-10 , legend = c('training', 'test'),col = c('blue', 'red'), pch = 20, xjust = 0, yjust = 0,cex=0.75)
 
 ############################################################
 #w function for running mean smoother
@@ -103,7 +103,7 @@ cat('Regressogram => RMSE is', test_regressogram_rmse,'when h is', bin_width, '\
 #mean smoother parameters
 rms_bin_width <- 0.37
 rms_origin <- 1.5
-rms_x_max <- 5.2
+rms_x_max <- max(data$eruptions)
 rms_data_interval <- seq(from = rms_origin, to = rms_x_max, by = 0.02)
 
 #running mean smoother of train_data with bin width: 0.37
@@ -131,19 +131,12 @@ lines(x = train_data_rms$x,
       ylab = 'waiting',
       type = 'l')
 title(main = 'h = 0.37')
-legend(x = min(data$eruptions)-0.2, y= max(data$waiting)-24, legend = c('training', 'test'),
+legend(x = min(data$eruptions)-0.2, y= max(data$waiting)-10, legend = c('training', 'test'),
        col = c('blue', 'red'), pch = 20, xjust = 0, yjust = 0)
 
 #calculating RMSE of running mean smoother for test_data
-test_data_rms <- train_data_rms[test_data$eruptions * 
-                                  ((length(rms_data_interval) - 1) / 
-                                     (rms_x_max - rms_origin)) + 
-                                  1, ]
-test_data_rms_rmse <- sqrt(
-  sum((test_data$waiting - test_data_rms$rms)**2) /
-    nrow(test_data_rms))
 
-cat('Running Mean Smoother => RMSE is', test_data_rms_rmse,
-    'when h is', rms_bin_width)
+test_data_rms <- train_data_rms[test_data$eruptions * ((length(rms_data_interval) - 1) / (rms_x_max - rms_origin)) + 1, ]
 
+cat('Running Mean Smoother => RMSE is', test_data_rms_rmse,'when h is', rms_bin_width)
 
