@@ -1,5 +1,5 @@
 #read data 
-setwd('/Users/euludag14/Documents/MachineLearningCourse/engr421_dasc521_fall2019_hw04')
+#setwd('/home/emre/Documents/CollegeFiles/COMP421/MachineLearningCourse/engr421_dasc521_fall2019_hw04')
 data <- read.csv('hw04_data_set.csv')
 
 #split data into trest and training data
@@ -51,15 +51,20 @@ lines(x = draw_data$x,
       type = 'S')
 title(main = 'h = 0.37')
 
-legend(x = min(data$eruptions)-0.2, y= max(data$waiting)-10 , legend = c('training', 'test'),col = c('blue', 'red'), pch = 20, xjust = 0, yjust = 0,cex=0.75)
+legend(x = min(data$eruptions)-0.2, y= max(data$waiting)-25 , legend = c('training', 'test'),col = c('blue', 'red'), pch = 20, xjust = 0, yjust = 0,cex=0.75)
 
 ############################################################
 #w function for running mean smoother
 w <- function(x){
   x <- data.frame(abs(x))
-  x <- apply(X = x, MARGIN = c(1, 2), FUN = function(e){
-               if (e <= 0.5){e <- 1}
-               else{e <- 0}})return (x)
+  x <- apply(X = x, MARGIN = c(1, 2),FUN = function(e){
+               if (e <= 0.5){
+                 e <- 1
+               }else{
+                 e <- 0
+               }
+             })
+  return (x)
 }
 
 #running mean smoother function with data_interval, data and bin_width parameters
@@ -93,7 +98,7 @@ plot(x = training_data$eruptions,y = training_data$waiting,xlab = 'eruptions',yl
 points(x = test_data$eruptions,y = test_data$waiting,type = 'p',pch = 20,col = 'red')
 lines(x = train_data_rms$x,y = train_data_rms$rms,xlab = 'eruptions',ylab = 'waiting',type = 'l')
 title(main = 'h = 0.37')
-legend(x = min(data$eruptions)-0.2, y= max(data$waiting)-10, legend = c('training', 'test'),col = c('blue', 'red'), pch = 20, xjust = 0, yjust = 0)
+legend(x = min(data$eruptions)-0.2, y= max(data$waiting)-25, legend = c('training', 'test'),col = c('blue', 'red'), pch = 20, xjust = 0, yjust = 0)
 
 #calculating RMSE of running mean smoother for test_data
 
@@ -126,7 +131,7 @@ plot(x = training_data$eruptions,y = training_data$waiting,xlab = 'erruptions',y
 points(x = test_data$eruptions,y = test_data$waiting,type = 'p',pch = 20,col = 'red')
 lines(x = train_data_ks$x,y = train_data_ks$ks,xlab = 'x',ylab = 'y',type = 'l')
 title(main = 'h = 0.37')
-legend(x = min(data$eruptions)-0.2, y= max(data$waiting)-10, legend = c('training', 'test'),col = c('blue', 'red'), pch = 20, xjust = 0, yjust = 0)
+legend(x = min(data$eruptions)-0.2, y= max(data$waiting)-25, legend = c('training', 'test'),col = c('blue', 'red'), pch = 20, xjust = 0, yjust = 0)
 
 #calculating RMSE of kernel smoother for test_data
 test_data_ks <- train_data_ks[ceiling(test_data$eruptions * ((length(ks_data_interval) - 1) / (ks_x_max - ks_origin+2))), ]
