@@ -31,6 +31,7 @@ sample_test = target1_training.iloc[0:1000,:]
 from sklearn import preprocessing
 le = preprocessing.LabelEncoder()
 
+
 def take_rmse(x):
     size = len(x)
     inner_sum = 0
@@ -51,8 +52,6 @@ def do_label_encoding(x):
     le.fit(x)
     x = le.transform(x)
     print(x)
-
-
 
 
 
