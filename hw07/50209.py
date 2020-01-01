@@ -53,7 +53,9 @@ def do_label_encoding(x):
     print(x)
 
 
+sample_test = sample_test.drop(sample_test.columns[1], axis=1)
 
+# If the number of nan data points are above a certain treshold drop them, also if the rmse is very large basically reduce those columns
 
 
 # Below lines will be run when the preprocessing starts
