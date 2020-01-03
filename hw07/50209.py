@@ -28,55 +28,10 @@ target3_training_label = pd.read_csv('hw07_target3_training_label.csv')
 
 sample_test = target1_training.iloc[0:1000,:]
 
-from sklearn import preprocessing
-le = preprocessing.LabelEncoder()
 
 
-def take_rmse(x):
-    size = len(x)
-    inner_sum = 0
-    mean_of_data = np.mean(x)
-    for i in x:
-        inner_sum += np.square(i-mean_of_data)
-    return np.sqrt(inner_sum/size)
-
-def count_nan(x):
-    count = 0
-    for i in x:
-        if(str(i) == 'nan'):
-            count+=1
-    return count
 
 
-def do_label_encoding(x):
-    le.fit(x)
-    x = le.transform(x)
-    print(x)
 
-
-sample_test = sample_test.drop(sample_test.columns[1], axis=1)
-
-<<<<<<< HEAD
-# If the number of nan data points are above a certain treshold drop them, also if the rmse is very large basically reduce those columns
-
-
-=======
->>>>>>> 6ec6858fc1f38e1b81141b3bcd49ed5f2eb9cb20
-# Below lines will be run when the preprocessing starts
-# =============================================================================
-# 
-#    
-#    
-# print(sample_test.iloc[:,45])
-# do_label_encoding(sample_test.iloc[:,45])
-# 
-# for i in range(len(sample_test.columns)):
-#     print(count_nan(sample_test.iloc[:,i])/len(sample_test.iloc[:,i]))
-# 
-# for i in range(len(sample_test.columns)):
-#     if(count_nan(sample_test.iloc[:,i])/len(sample_test.iloc[:,i])>0.05):
-#         print(i)
-#         
-# =============================================================================
         
 
