@@ -20,7 +20,7 @@ training_data = pd.read_csv('hw08_training_data.csv')
 test_data = pd.read_csv('hw08_test_data.csv')
 training_labels = pd.read_csv('hw08_training_label.csv')
 
-easy_sample = training_data.iloc[0:1000,:]
+easy_sample = training_data.iloc[0:10000,:]
 
 easy_sample.drop(training_data.columns[
         [0,1,2,16,17,18,19,73,74,75,76,77,78,79,80,81,82,83,84,85,91,127,129,130,
@@ -76,17 +76,22 @@ target = target_1_label + target_2_label + target_3_label + target_4_label + tar
 #from sklearn.model_selection import train_test_split
 #x_training, x_test,y_training,y_test = train_test_split(all_values,target,test_size=0.2, random_state=0)
 
-from sklearn.tree import DecisionTreeClassifier
-dtc = DecisionTreeClassifier(criterion = 'entropy')
+#from sklearn.tree import DecisionTreeClassifier
+#dtc = DecisionTreeClassifier(criterion = 'entropy')
 
 from sklearn.neighbors import KNeighborsClassifier
 
 knn = KNeighborsClassifier(n_neighbors=5, metric='minkowski')
+
+#Aşağıda değerlerini düzelt.
+
+
 knn.fit(x_training,y_training)
 y_prediction = knn.predict(x_test)
 cm = confusion_matrix(y_test,y_prediction)
 print('KNN')
 print(cm)
+
 mae = mean_absolute_error(y_test, y_prediction)
 rms = sqrt(mean_squared_error(y_test, y_prediction))
 score_funtion = knn.score(x_test, y_test)
